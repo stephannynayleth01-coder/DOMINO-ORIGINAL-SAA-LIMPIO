@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "23018332171",
+    "project_id": "domino-version-limpia",
+    "storage_bucket": "domino-version-limpia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23018332171:android:08b7f99cba12ebdb3b270e",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9PYcY0jhSMwiAFiDs4X-9H_8XxtQ97MA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
