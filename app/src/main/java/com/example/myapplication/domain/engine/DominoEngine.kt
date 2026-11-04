@@ -48,33 +48,33 @@ class DominoEngine {
         onLeftSide: Boolean
     ): Result<GameState> {
         if (state.isFinished) {
-            return Result.failure(IllegalStateException("The game is already finished"))
+            return Result.failure(IllegalStateException("La partida ya terminó"))
         }
         if (state.turnPlayerId != playerId) {
-            return Result.failure(IllegalStateException("It is not $playerId's turn"))
+            return Result.failure(IllegalStateException("No es el turno de $playerId"))
         }
 
         val playerIndex = state.players.indexOfFirst { it.id == playerId }
         if (playerIndex == -1) {
-            return Result.failure(IllegalArgumentException("Player $playerId was not found"))
+            return Result.failure(IllegalArgumentException("Jugador $playerId no encontrado"))
         }
 
         val player = state.players[playerIndex]
         val tileIndex = player.hand.indexOf(tile)
         if (tileIndex == -1) {
-            return Result.failure(IllegalArgumentException("Player $playerId does not own tile $tile"))
+            return Result.failure(IllegalArgumentException("El jugador $playerId no tiene la ficha $tile"))
         }
 
         val updatedBoard = when {
             state.board.isEmpty -> Board(listOf(tile))
             onLeftSide -> state.board.placeLeft(tile)
                 ?: return Result.failure(
-                    IllegalArgumentException("Tile $tile cannot be placed on the left end")
+                    IllegalArgumentException("La ficha $tile no se puede colocar en el extremo izquierdo")
                 )
 
             else -> state.board.placeRight(tile)
                 ?: return Result.failure(
-                    IllegalArgumentException("Tile $tile cannot be placed on the right end")
+                    IllegalArgumentException("La ficha $tile no se puede colocar en el extremo derecho")
                 )
         }
 
@@ -100,26 +100,26 @@ class DominoEngine {
 
     fun useSkipPower(state: GameState, playerId: String): Result<GameState> {
         if (state.isFinished) {
-            return Result.failure(IllegalStateException("The game is already finished"))
+            return Result.failure(IllegalStateException("La partida ya terminó"))
         }
         if (state.turnPlayerId != playerId) {
-            return Result.failure(IllegalStateException("It is not $playerId's turn"))
+            return Result.failure(IllegalStateException("No es el turno de $playerId"))
         }
         if (state.players.none { it.id != playerId }) {
-            return Result.failure(IllegalStateException("Skip power requires an opponent"))
+            return Result.failure(IllegalStateException("El poder de Salto requiere un oponente"))
         }
         if (state.skipNextTurnFor == playerId) {
-            return Result.failure(IllegalStateException("Skip power is already active"))
+            return Result.failure(IllegalStateException("El poder de Salto ya está activo"))
         }
 
         val playerIndex = state.players.indexOfFirst { it.id == playerId }
         if (playerIndex == -1) {
-            return Result.failure(IllegalArgumentException("Player $playerId was not found"))
+            return Result.failure(IllegalArgumentException("Jugador $playerId no encontrado"))
         }
 
         val player = state.players[playerIndex]
         if (player.remainingSkipPowers <= 0) {
-            return Result.failure(IllegalStateException("Player $playerId has no skip powers left"))
+            return Result.failure(IllegalStateException("El jugador $playerId no tiene poderes de Salto disponibles"))
         }
 
         val updatedPlayer = player.copy(
@@ -140,18 +140,18 @@ class DominoEngine {
 
     fun drawTile(state: GameState, playerId: String): Result<GameState> {
         if (state.isFinished) {
-            return Result.failure(IllegalStateException("The game is already finished"))
+            return Result.failure(IllegalStateException("La partida ya terminó"))
         }
         if (state.turnPlayerId != playerId) {
-            return Result.failure(IllegalStateException("It is not $playerId's turn"))
+            return Result.failure(IllegalStateException("No es el turno de $playerId"))
         }
         if (state.deck.isEmpty()) {
-            return Result.failure(IllegalStateException("The deck is empty"))
+            return Result.failure(IllegalStateException("El pozo está vacío"))
         }
 
         val playerIndex = state.players.indexOfFirst { it.id == playerId }
         if (playerIndex == -1) {
-            return Result.failure(IllegalArgumentException("Player $playerId was not found"))
+            return Result.failure(IllegalArgumentException("Jugador $playerId no encontrado"))
         }
 
         val drawnTile = state.deck.first()

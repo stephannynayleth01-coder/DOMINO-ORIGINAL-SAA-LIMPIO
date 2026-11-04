@@ -24,6 +24,7 @@ fun LobbyScreen(
     roomCode: String? = "HK89A2",
     hostName: String = "Jugador 1",
     guestName: String? = null,
+    isHost: Boolean = true,
     onCancelClick: () -> Unit = {},
     onStartGameClick: () -> Unit = {}
 ) {
@@ -199,7 +200,7 @@ fun LobbyScreen(
 
             Button(
                 onClick = onStartGameClick,
-                enabled = guestName != null,
+                enabled = guestName != null && isHost,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -213,7 +214,11 @@ fun LobbyScreen(
                 )
             ) {
                 Text(
-                    text = "INICIAR PARTIDA",
+                    text = if (isHost) {
+                        "INICIAR PARTIDA"
+                    } else {
+                        "ESPERANDO AL ANFITRIÓN..."
+                    },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )

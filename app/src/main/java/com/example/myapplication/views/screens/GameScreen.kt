@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.auth.FirebaseAuth
 import com.example.myapplication.viewmodels.GameViewModel
 import com.example.myapplication.views.components.*
 import com.example.myapplication.views.theme.*
@@ -24,7 +23,8 @@ import com.example.myapplication.views.theme.*
 @Composable
 fun GameScreen(
     gameViewModel: GameViewModel = viewModel(),
-    onBackToHome: () -> Unit
+    onBackToHome: () -> Unit,
+    onBackToLobby: () -> Unit = onBackToHome
 ) {
     val uiState by gameViewModel.uiState.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
@@ -39,7 +39,21 @@ fun GameScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = CasinoGold)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Cargando partida...", color = CasinoTextWhite, fontSize = 16.sp)
+                Text(
+                    text = if (uiState.errorMessage != null) {
+                        uiState.errorMessage!!
+                    } else {
+                        "Sincronizando partida..."
+                    },
+                    color = CasinoTextWhite,
+                    fontSize = 16.sp
+                )
+                if (uiState.errorMessage != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextButton(onClick = onBackToHome) {
+                        Text("Volver al menú", color = CasinoGold)
+                    }
+                }
             }
         }
         return
@@ -47,8 +61,41 @@ fun GameScreen(
 
     val state = uiState.gameState!!
 
-    val currentUid = FirebaseAuth.getInstance().currentUser?.uid
-    val myPlayer = state.players.firstOrNull { it.id == currentUid } ?: state.players.firstOrNull() ?: return
+    val myPlayer = state.players.firstOrNull { it.id == uiState.localPlayerId }
+
+    if (myPlayer == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CasinoDarkFelt)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "No se pudo identificar a tu jugador en esta partida.",
+                    color = CasinoTextWhite,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Vuelve al lobby y vuelve a entrar con la misma cuenta.",
+                    color = CasinoTextMuted,
+                    fontSize = 13.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onBackToLobby,
+                    colors = ButtonDefaults.buttonColors(containerColor = CasinoGold)
+                ) {
+                    Text("Volver al lobby", color = CasinoDarkFelt, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        return
+    }
+
     val opponentPlayer = state.players.firstOrNull { it.id != myPlayer.id }
     val isMyTurn = state.turnPlayerId == myPlayer.id
     val canPlay = myPlayer.canPlay(state.board)
@@ -113,6 +160,16 @@ fun GameScreen(
                         )
                     }
                 }
+            }
+
+            if (uiState.isSyncing) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    color = CasinoGold,
+                    trackColor = CasinoEmerald
+                )
             }
 
             // Banner de Mensaje / Eventos Aleatorios
@@ -269,14 +326,30 @@ fun GameScreen(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = { gameViewModel.startNewGame() },
-                    colors = ButtonDefaults.buttonColors(containerColor = CasinoGold, contentColor = CasinoDarkFelt),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Jugar de nuevo", fontWeight = FontWeight.Bold)
+                if (uiState.isMultiplayer) {
+                    Button(
+                        onClick = onBackToLobby,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CasinoGold,
+                            contentColor = CasinoDarkFelt
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Volver al Lobby", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Button(
+                        onClick = { gameViewModel.restartGame() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CasinoGold,
+                            contentColor = CasinoDarkFelt
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Jugar de nuevo", fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
