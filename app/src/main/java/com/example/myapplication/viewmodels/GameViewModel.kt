@@ -5,6 +5,7 @@ import com.example.myapplication.domain.engine.DominoEngine
 import com.example.myapplication.domain.models.Board
 import com.example.myapplication.domain.models.GameState
 import com.example.myapplication.domain.models.Tile
+import com.example.myapplication.repositories.RoomRepository
 import com.example.myapplication.views.components.PowerType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,8 @@ data class GameUiState(
 
 class GameViewModel : ViewModel() {
     private val engine = DominoEngine()
+    private val repository = RoomRepository()
+    private var activeRoomId: String = "local-room"
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -30,16 +33,42 @@ class GameViewModel : ViewModel() {
         p1Id: String = "player1",
         p1Name: String = "Jugador 1",
         p2Id: String = "player2",
-        p2Name: String = "Jugador 2"
+        p2Name: String = "Jugador 2",
+        isHost: Boolean = true
     ) {
-        val initialGame = engine.createInitialGame(
-            roomId = roomId,
-            player1Id = p1Id,
-            player1Name = p1Name,
-            player2Id = p2Id,
-            player2Name = p2Name
+        activeRoomId = roomId
+
+        if (isHost || roomId == "local-room") {
+            val initialGame = engine.createInitialGame(
+                roomId = roomId,
+                player1Id = p1Id,
+                player1Name = p1Name,
+                player2Id = p2Id,
+                player2Name = p2Name
+            )
+            _uiState.value = GameUiState(gameState = initialGame)
+            if (roomId != "local-room") {
+                repository.saveGameState(roomId, initialGame)
+            }
+        }
+
+        if (roomId != "local-room") {
+            repository.listenToGame(roomId) { syncedGameState ->
+                _uiState.value = _uiState.value.copy(gameState = syncedGameState)
+            }
+        }
+    }
+
+    private fun updateAndSyncState(newState: GameState) {
+        _uiState.value = _uiState.value.copy(
+            gameState = newState,
+            selectedTile = null,
+            activePower = null,
+            errorMessage = null
         )
-        _uiState.value = GameUiState(gameState = initialGame)
+        if (activeRoomId != "local-room") {
+            repository.saveGameState(activeRoomId, newState)
+        }
     }
 
     fun selectTile(tile: Tile) {
@@ -56,7 +85,6 @@ class GameViewModel : ViewModel() {
         val activePower = _uiState.value.activePower
 
         val result = if (activePower == PowerType.WILDCARD) {
-            // Comodín: ignorar restricciones de extremos
             val updatedBoard = if (state.board.isEmpty) {
                 Board(listOf(tile))
             } else if (onLeftSide) {
@@ -88,12 +116,7 @@ class GameViewModel : ViewModel() {
 
         if (result.isSuccess) {
             val updatedState = result.getOrThrow()
-            _uiState.value = _uiState.value.copy(
-                gameState = updatedState,
-                selectedTile = null,
-                activePower = null,
-                errorMessage = null
-            )
+            updateAndSyncState(updatedState)
             checkAndTriggerEvent()
         } else {
             _uiState.value = _uiState.value.copy(
@@ -110,9 +133,9 @@ class GameViewModel : ViewModel() {
             PowerType.SKIP -> {
                 val result = engine.useSkipPower(state, state.turnPlayerId)
                 if (result.isSuccess) {
+                    val updatedState = result.getOrThrow()
+                    updateAndSyncState(updatedState)
                     _uiState.value = _uiState.value.copy(
-                        gameState = result.getOrThrow(),
-                        activePower = null,
                         activeEventMessage = "¡Poder de Salto activado! Conservas tu turno."
                     )
                 } else {
@@ -129,7 +152,6 @@ class GameViewModel : ViewModel() {
                 )
             }
             PowerType.SWAP -> {
-                // Intercambio de fichas con el oponente
                 val opponent = state.players.firstOrNull { it.id != state.turnPlayerId }
                 val meIndex = state.players.indexOfFirst { it.id == state.turnPlayerId }
                 val oppIndex = state.players.indexOfFirst { it.id != state.turnPlayerId }
@@ -149,17 +171,18 @@ class GameViewModel : ViewModel() {
                         this[oppIndex] = this[oppIndex].copy(hand = oppHand)
                     }
 
+                    val updatedState = state.copy(players = updatedPlayers)
+                    updateAndSyncState(updatedState)
                     _uiState.value = _uiState.value.copy(
-                        gameState = state.copy(players = updatedPlayers),
                         activeEventMessage = "¡Poder Intercambio! Has cambiado una ficha aleatoria con tu oponente."
                     )
                 }
             }
             PowerType.INVERT -> {
-                // Inversión de turnos
                 val nextTurnId = state.players.firstOrNull { it.id != state.turnPlayerId }?.id ?: state.turnPlayerId
+                val updatedState = state.copy(turnPlayerId = nextTurnId)
+                updateAndSyncState(updatedState)
                 _uiState.value = _uiState.value.copy(
-                    gameState = state.copy(turnPlayerId = nextTurnId),
                     activeEventMessage = "¡Poder Inversión! El orden de turnos ha cambiado."
                 )
             }
@@ -170,10 +193,8 @@ class GameViewModel : ViewModel() {
         val state = _uiState.value.gameState ?: return
         val result = engine.drawTile(state, state.turnPlayerId)
         if (result.isSuccess) {
-            _uiState.value = _uiState.value.copy(
-                gameState = result.getOrThrow(),
-                errorMessage = null
-            )
+            val updatedState = result.getOrThrow()
+            updateAndSyncState(updatedState)
         } else {
             _uiState.value = _uiState.value.copy(
                 errorMessage = "No se pudo robar ficha del pozo"
@@ -184,12 +205,8 @@ class GameViewModel : ViewModel() {
     fun passTurn() {
         val state = _uiState.value.gameState ?: return
         val nextTurnId = state.players.firstOrNull { it.id != state.turnPlayerId }?.id ?: state.turnPlayerId
-        val nextState = state.copy(turnPlayerId = nextTurnId)
-        _uiState.value = _uiState.value.copy(
-            gameState = engine.checkGameEnd(nextState),
-            selectedTile = null,
-            activePower = null
-        )
+        val nextState = engine.checkGameEnd(state.copy(turnPlayerId = nextTurnId))
+        updateAndSyncState(nextState)
     }
 
     fun dismissEventMessage() {
@@ -197,7 +214,6 @@ class GameViewModel : ViewModel() {
     }
 
     private fun checkAndTriggerEvent() {
-        // 20% de probabilidad de evento aleatorio tras cada jugada
         if (Random.nextFloat() < 0.20f) {
             val events = listOf(
                 "¡EVENTO: Tormenta de Fichas! El clima altera las jugadas.",

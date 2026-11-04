@@ -196,7 +196,7 @@ class DominoEngine {
     private fun buildDeck(): List<Tile> = buildList {
         for (left in MIN_TILE_VALUE..MAX_TILE_VALUE) {
             for (right in left..MAX_TILE_VALUE) {
-                add(Tile(intArrayOf(left, right)))
+                add(Tile(left, right))
             }
         }
     }

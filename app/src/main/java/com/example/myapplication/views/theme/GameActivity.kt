@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +40,23 @@ class GameActivity : ComponentActivity() {
                     val roomModel by roomViewModel.model.collectAsState()
                     val roomError by roomViewModel.error.collectAsState()
 
+                    // Auto-transición para el jugador 2 cuando la sala pase a PLAYING
+                    LaunchedEffect(roomModel?.status) {
+                        if (roomModel?.status == "PLAYING" && currentScreen == TypeScreen.LOBBY) {
+                            val p1 = roomModel?.player1
+                            val p2 = roomModel?.player2
+                            gameViewModel.startNewGame(
+                                roomId = roomModel?.code ?: "room-1",
+                                p1Id = p1?.uid ?: "player1",
+                                p1Name = p1?.getVisibleName() ?: "Jugador 1",
+                                p2Id = p2?.uid ?: "player2",
+                                p2Name = p2?.getVisibleName() ?: "Jugador 2",
+                                isHost = false
+                            )
+                            currentScreen = TypeScreen.GAME
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -53,8 +71,32 @@ class GameActivity : ComponentActivity() {
                                     },
                                     onClickMultiplayer = {
                                         roomViewModel.clearError()
-                                        currentScreen = TypeScreen.LOBBY
+                                        currentScreen = TypeScreen.ROOM_SELECTION
                                     }
+                                )
+                            }
+
+                            TypeScreen.ROOM_SELECTION -> {
+                                RoomSelectionScreen(
+                                    onCreateRoomClick = {
+                                        roomViewModel.createRoom()
+                                        currentScreen = TypeScreen.LOBBY
+                                    },
+                                    onJoinByCodeClick = { code ->
+                                        roomViewModel.joinRoomByCode(code) { success ->
+                                            if (success) {
+                                                currentScreen = TypeScreen.LOBBY
+                                            }
+                                        }
+                                    },
+                                    onJoinOpenRoomClick = {
+                                        roomViewModel.joinOpenRoom { success ->
+                                            if (success) {
+                                                currentScreen = TypeScreen.LOBBY
+                                            }
+                                        }
+                                    },
+                                    errorMessage = roomError
                                 )
                             }
 
@@ -64,7 +106,7 @@ class GameActivity : ComponentActivity() {
                                     hostName = roomModel?.player1?.getVisibleName() ?: "Anfitrión",
                                     guestName = roomModel?.player2?.getVisibleName(),
                                     onCancelClick = {
-                                        currentScreen = TypeScreen.HOME
+                                        currentScreen = TypeScreen.ROOM_SELECTION
                                     },
                                     onStartGameClick = {
                                         val p1 = roomModel?.player1
@@ -74,7 +116,8 @@ class GameActivity : ComponentActivity() {
                                             p1Id = p1?.uid ?: "player1",
                                             p1Name = p1?.getVisibleName() ?: "Jugador 1",
                                             p2Id = p2?.uid ?: "player2",
-                                            p2Name = p2?.getVisibleName() ?: "Jugador 2"
+                                            p2Name = p2?.getVisibleName() ?: "Jugador 2",
+                                            isHost = true
                                         )
                                         currentScreen = TypeScreen.GAME
                                     }
@@ -98,7 +141,7 @@ class GameActivity : ComponentActivity() {
                                     },
                                     onClickMultiplayer = {
                                         roomViewModel.clearError()
-                                        currentScreen = TypeScreen.LOBBY
+                                        currentScreen = TypeScreen.ROOM_SELECTION
                                     }
                                 )
                             }

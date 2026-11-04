@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.myapplication.data.models.PlayerModel
 import com.example.myapplication.data.models.RoomCodeGenerator
 import com.example.myapplication.data.models.RoomModel
+import com.example.myapplication.domain.models.GameState
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
@@ -14,9 +15,11 @@ class RoomRepository {
     private val TAG = "RoomRepository"
     private val database: FirebaseDatabase by lazy { FirebaseDatabase.getInstance() }
     private val roomsRef: DatabaseReference by lazy { database.getReference("rooms") }
+    private val gamesRef: DatabaseReference by lazy { database.getReference("games") }
 
     // En memoria fallback si Firebase aún no está vinculado en la consola
     private val activeRoomsLocal = mutableMapOf<String, RoomModel>()
+    private val activeGamesLocal = mutableMapOf<String, GameState>()
 
     fun createRoom(hostPlayer: PlayerModel): RoomModel {
         val roomCode = RoomCodeGenerator.generate(6)
@@ -147,6 +150,36 @@ class RoomRepository {
         } catch (e: Exception) {
             Log.w(TAG, "Realtime listener offline, returning local state", e)
             activeRoomsLocal[roomCode]?.let(onUpdate)
+        }
+    }
+
+    fun saveGameState(roomId: String, gameState: GameState) {
+        activeGamesLocal[roomId] = gameState
+        try {
+            gamesRef.child(roomId).setValue(gameState)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write game state to Firebase", e)
+        }
+    }
+
+    fun listenToGame(roomId: String, onUpdate: (GameState) -> Unit) {
+        try {
+            gamesRef.child(roomId).addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val game = snapshot.getValue(GameState::class.java)
+                    if (game != null) {
+                        activeGamesLocal[roomId] = game
+                        onUpdate(game)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.w(TAG, "Game listener cancelled for $roomId", error.toException())
+                }
+            })
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to listen to game state, using local fallback", e)
+            activeGamesLocal[roomId]?.let(onUpdate)
         }
     }
 }
