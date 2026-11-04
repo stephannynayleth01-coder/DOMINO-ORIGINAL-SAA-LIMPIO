@@ -1,11 +1,10 @@
-package com.udistrital.hockeygame.domain.engine
+package com.example.myapplication.domain.engine
 
-import com.example.myapplication.domain.models.domain.models.Board
-import com.example.myapplication.domain.models.domain.models.PlayerState
-import com.example.myapplication.domain.models.domain.models.Tile
-import com.udistrital.hockeygame.domain.models.GameState
+import com.example.myapplication.domain.models.Board
+import com.example.myapplication.domain.models.GameState
+import com.example.myapplication.domain.models.PlayerState
+import com.example.myapplication.domain.models.Tile
 import kotlin.random.Random
-
 
 class DominoEngine {
 

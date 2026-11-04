@@ -1,4 +1,4 @@
-package com.example.myapplication.domain.models.domain.models
+package com.example.myapplication.domain.models
 
 /*
  * Estado de un jugador dentro de una partida.

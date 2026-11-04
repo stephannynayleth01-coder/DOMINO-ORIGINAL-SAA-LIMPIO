@@ -1,8 +1,4 @@
-package com.udistrital.hockeygame.domain.models
-
-import com.example.myapplication.domain.models.domain.models.Board
-import com.example.myapplication.domain.models.domain.models.PlayerState
-import com.example.myapplication.domain.models.domain.models.Tile
+package com.example.myapplication.domain.models
 
 data class GameState(
     val roomId: String,
