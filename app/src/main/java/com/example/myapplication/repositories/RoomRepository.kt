@@ -17,7 +17,6 @@ class RoomRepository {
     private val roomsRef: DatabaseReference by lazy { database.getReference("rooms") }
     private val gamesRef: DatabaseReference by lazy { database.getReference("games") }
 
-    // En memoria fallback si Firebase aún no está vinculado en la consola
     private val activeRoomsLocal = mutableMapOf<String, RoomModel>()
     private val activeGamesLocal = mutableMapOf<String, GameState>()
 
@@ -51,20 +50,18 @@ class RoomRepository {
     fun joinRoomByCode(code: String, guestPlayer: PlayerModel, onResult: (RoomModel?, String?) -> Unit) {
         val cleanCode = code.trim().uppercase()
 
-        // 1. Verificar localmente
         val localRoom = activeRoomsLocal[cleanCode]
         if (localRoom != null && localRoom.player2 == null) {
             val updated = localRoom.copy(
                 player2 = guestPlayer,
                 turnPlayerUid = localRoom.player1.uid,
-                status = "PLAYING"
+                status = "WAITING"
             )
             activeRoomsLocal[cleanCode] = updated
             onResult(updated, null)
             return
         }
 
-        // 2. Intentar en Firebase
         try {
             roomsRef.child(cleanCode).addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -84,7 +81,7 @@ class RoomRepository {
                         code = cleanCode,
                         player2 = guestPlayer,
                         turnPlayerUid = room.player1.uid,
-                        status = "PLAYING"
+                        status = "WAITING"
                     )
 
                     activeRoomsLocal[cleanCode] = updatedRoom
@@ -103,7 +100,6 @@ class RoomRepository {
     }
 
     fun joinOpenRoom(guestPlayer: PlayerModel, onResult: (RoomModel?, String?) -> Unit) {
-        // Buscar cualquier sala local esperando
         val openLocal = activeRoomsLocal.values.firstOrNull { it.player2 == null && !it.finished }
         if (openLocal != null) {
             joinRoomByCode(openLocal.code, guestPlayer, onResult)
@@ -153,6 +149,14 @@ class RoomRepository {
         }
     }
 
+    fun updateRoomStatus(roomCode: String, status: String) {
+        try {
+            roomsRef.child(roomCode).child("status").setValue(status)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update room status", e)
+        }
+    }
+
     fun saveGameState(roomId: String, gameState: GameState) {
         activeGamesLocal[roomId] = gameState
         try {
@@ -166,15 +170,21 @@ class RoomRepository {
         try {
             gamesRef.child(roomId).addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val game = snapshot.getValue(GameState::class.java)
-                    if (game != null) {
-                        activeGamesLocal[roomId] = game
-                        onUpdate(game)
+                    try {
+                        val game = snapshot.getValue(GameState::class.java)
+                        if (game != null) {
+                            activeGamesLocal[roomId] = game
+                            onUpdate(game)
+                        } else {
+                            Log.w(TAG, "GameState snapshot for $roomId was null or empty")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error deserializing GameState for $roomId", e)
                     }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.w(TAG, "Game listener cancelled for $roomId", error.toException())
+                    Log.w(TAG, "Game listener cancelled for $roomId: ${error.message}", error.toException())
                 }
             })
         } catch (e: Exception) {

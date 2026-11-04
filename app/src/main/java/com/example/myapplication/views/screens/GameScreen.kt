@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.example.myapplication.viewmodels.GameViewModel
 import com.example.myapplication.views.components.*
 import com.example.myapplication.views.theme.*
@@ -28,16 +29,27 @@ fun GameScreen(
     val uiState by gameViewModel.uiState.collectAsState()
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (uiState.gameState == null) {
-            gameViewModel.startNewGame()
+    if (uiState.gameState == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CasinoDarkFelt),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = CasinoGold)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Cargando partida...", color = CasinoTextWhite, fontSize = 16.sp)
+            }
         }
+        return
     }
 
-    val state = uiState.gameState ?: return
+    val state = uiState.gameState!!
 
-    val myPlayer = state.players.firstOrNull() ?: return
-    val opponentPlayer = state.players.getOrNull(1)
+    val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+    val myPlayer = state.players.firstOrNull { it.id == currentUid } ?: state.players.firstOrNull() ?: return
+    val opponentPlayer = state.players.firstOrNull { it.id != myPlayer.id }
     val isMyTurn = state.turnPlayerId == myPlayer.id
     val canPlay = myPlayer.canPlay(state.board)
 

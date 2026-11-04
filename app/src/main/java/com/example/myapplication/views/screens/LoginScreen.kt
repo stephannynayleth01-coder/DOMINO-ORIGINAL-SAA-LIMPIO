@@ -31,6 +31,7 @@ import com.example.myapplication.views.theme.*
 fun LoginScreen(
     onLoginClick: (email: String, password: String) -> Unit,
     onGoogleSignInClick: () -> Unit = {},
+    onGuestSignInClick: () -> Unit = {},
     onRegisterClick: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
@@ -227,7 +228,6 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón de Inicio de Sesión con Google
                     OutlinedButton(
                         onClick = onGoogleSignInClick,
                         enabled = !isLoading,
@@ -259,6 +259,20 @@ fun LoginScreen(
                                 color = CasinoTextWhite
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    TextButton(
+                        onClick = onGuestSignInClick,
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            text = "Entrar como Invitado / Modo Práctica",
+                            color = CasinoGoldLight,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }

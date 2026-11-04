@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.MeetingRoom
@@ -24,6 +25,7 @@ fun RoomSelectionScreen(
     onCreateRoomClick: () -> Unit = {},
     onJoinByCodeClick: (String) -> Unit = {},
     onJoinOpenRoomClick: () -> Unit = {},
+    onBackToHomeClick: () -> Unit = {},
     errorMessage: String? = null
 ) {
     var roomCodeInput by remember { mutableStateOf("") }
@@ -35,6 +37,27 @@ fun RoomSelectionScreen(
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopStart),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackToHomeClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver al menú principal",
+                    tint = CasinoGold
+                )
+            }
+            Text(
+                text = "Menú Principal",
+                color = CasinoGold,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -194,6 +217,17 @@ fun RoomSelectionScreen(
                         )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(onClick = onBackToHomeClick) {
+                Text(
+                    text = "◄ Volver al Menú Principal",
+                    color = CasinoRed,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

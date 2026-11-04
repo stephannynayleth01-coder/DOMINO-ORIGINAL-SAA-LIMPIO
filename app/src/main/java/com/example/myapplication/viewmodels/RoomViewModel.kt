@@ -96,6 +96,10 @@ class RoomViewModel : ViewModel() {
         }
     }
 
+    fun startRoomGame(roomCode: String) {
+        repository.updateRoomStatus(roomCode, "PLAYING")
+    }
+
     fun clearError() {
         _error.value = null
     }

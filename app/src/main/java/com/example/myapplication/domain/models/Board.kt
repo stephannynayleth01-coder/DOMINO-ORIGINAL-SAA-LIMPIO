@@ -1,24 +1,26 @@
 package com.example.myapplication.domain.models
 
+import com.google.firebase.database.Exclude
+
 /*
- * Tablero de dominó.
+ * Tablero de dominó compatible con Firebase Realtime Database.
  */
 data class Board(
     val tiles: List<Tile> = emptyList()
 ) {
 
+    @get:Exclude
     val isEmpty: Boolean
         get() = tiles.isEmpty()
 
+    @get:Exclude
     val leftEnd: Int?
         get() = tiles.firstOrNull()?.left
 
+    @get:Exclude
     val rightEnd: Int?
         get() = tiles.lastOrNull()?.right
 
-    /*
-     * Coloca ficha en el extremo izquierdo, invirtiéndola si es necesario y retorna un tablero nuevo o null si la ficha no coincide con el extremo.
-     */
     fun placeLeft(tile: Tile): Board? {
         if (tiles.isEmpty()) return Board(listOf(tile))
 
@@ -30,9 +32,6 @@ data class Board(
         }
     }
 
-    /*
-     * Coloca ficha en el extremo derecho, invirtiéndola si es necesario y return un tablero nuevo o null si la ficha no coincide con el extremo.
-     */
     fun placeRight(tile: Tile): Board? {
         if (tiles.isEmpty()) return Board(listOf(tile))
 

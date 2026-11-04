@@ -96,6 +96,9 @@ class GameActivity : ComponentActivity() {
                                             }
                                         }
                                     },
+                                    onBackToHomeClick = {
+                                        currentScreen = TypeScreen.HOME
+                                    },
                                     errorMessage = roomError
                                 )
                             }

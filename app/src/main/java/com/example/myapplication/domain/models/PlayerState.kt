@@ -1,23 +1,23 @@
 package com.example.myapplication.domain.models
 
+import com.google.firebase.database.Exclude
+
 /*
- * Estado de un jugador dentro de una partida.
+ * Estado de un jugador compatible con Firebase Realtime Database.
  */
 data class PlayerState(
-    val id: String,
-    val name: String,
+    val id: String = "",
+    val name: String = "",
     val hand: List<Tile> = emptyList(),
     val score: Int = 0,
     val remainingSkipPowers: Int = 1,
     val skipPowersUsed: Int = 0
 ) {
 
+    @get:Exclude
     val handScore: Int
         get() = hand.sumOf { it.score }
 
-    /*
-     * Indica si el jugador tiene al menos una ficha jugable en [board].
-     */
     fun canPlay(board: Board): Boolean {
         if (hand.isEmpty()) return false
         if (board.isEmpty) return true

@@ -39,12 +39,12 @@ class AuthActivity : ComponentActivity() {
             if (idToken != null) {
                 firebaseAuthWithGoogle(idToken)
             } else {
-                errorMessageState.value = "Google Sign-In requiere configurar Web Client ID en Firebase Console."
+                errorMessageState.value = "Google Sign-In requiere agregar la huella SHA-1 en Firebase Console."
                 isLoadingState.value = false
             }
         } catch (e: Exception) {
             Log.w(TAG, "Google sign in failed", e)
-            errorMessageState.value = "Inicia sesión con correo/contraseña o configura Google Client ID en Firebase."
+            errorMessageState.value = "Inicia sesión con correo/contraseña o usa 'Entrar como Invitado'."
             isLoadingState.value = false
         }
     }
@@ -67,10 +67,17 @@ class AuthActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         auth = Firebase.auth
 
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        val webClientIdResId = resources.getIdentifier("default_web_client_id", "string", packageName)
+        val webClientId = if (webClientIdResId != 0) getString(webClientIdResId) else ""
+
+        val gsoBuilder = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
-            .build()
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+        if (webClientId.isNotBlank()) {
+            gsoBuilder.requestIdToken(webClientId)
+        }
+
+        googleSignInClient = GoogleSignIn.getClient(this, gsoBuilder.build())
 
         setContent {
             HockeyGameTheme {
@@ -84,6 +91,9 @@ class AuthActivity : ComponentActivity() {
                             },
                             onGoogleSignInClick = {
                                 performGoogleSignIn()
+                            },
+                            onGuestSignInClick = {
+                                performGuestLogin()
                             },
                             onRegisterClick = {
                                 errorMessageState.value = null
@@ -128,8 +138,12 @@ class AuthActivity : ComponentActivity() {
                     goToGame()
                 } else {
                     Log.w(TAG, "signInWithEmail:failure", task.exception)
-                    errorMessageState.value = task.exception?.localizedMessage
-                        ?: "Error de autenticación. Verifica tus credenciales."
+                    val msg = task.exception?.localizedMessage.orEmpty()
+                    if (msg.contains("CONFIGURATION_NOT_FOUND", ignoreCase = true)) {
+                        errorMessageState.value = "Firebase: Activa 'Correo/contraseña' en Firebase Console (Authentication -> Sign-in method). O usa 'Entrar como Invitado'."
+                    } else {
+                        errorMessageState.value = msg.ifBlank { "Error de autenticación. Verifica tus credenciales." }
+                    }
                 }
             }
     }
@@ -158,10 +172,36 @@ class AuthActivity : ComponentActivity() {
                 } else {
                     isLoadingState.value = false
                     Log.w(TAG, "createUserWithEmail:failure", task.exception)
-                    errorMessageState.value = task.exception?.localizedMessage
-                        ?: "No se pudo crear la cuenta. Intenta con otro correo."
+                    val msg = task.exception?.localizedMessage.orEmpty()
+                    if (msg.contains("CONFIGURATION_NOT_FOUND", ignoreCase = true)) {
+                        errorMessageState.value = "Firebase: Activa 'Correo/contraseña' en Firebase Console (Authentication -> Sign-in method). O usa 'Entrar como Invitado'."
+                    } else {
+                        errorMessageState.value = msg.ifBlank { "No se pudo crear la cuenta. Intenta con otro correo." }
+                    }
                 }
             }
+    }
+
+    private fun performGuestLogin() {
+        isLoadingState.value = true
+        errorMessageState.value = null
+
+        try {
+            auth.signInAnonymously()
+                .addOnCompleteListener(this) { task ->
+                    isLoadingState.value = false
+                    if (task.isSuccessful) {
+                        Log.d(TAG, "signInAnonymously:success")
+                        goToGame()
+                    } else {
+                        Log.w(TAG, "signInAnonymously:failure", task.exception)
+                        goToGame()
+                    }
+                }
+        } catch (e: Exception) {
+            isLoadingState.value = false
+            goToGame()
+        }
     }
 
     private fun performGoogleSignIn() {
