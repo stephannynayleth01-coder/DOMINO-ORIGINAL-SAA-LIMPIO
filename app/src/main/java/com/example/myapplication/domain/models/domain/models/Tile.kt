@@ -1,4 +1,4 @@
-package com.example.myapplication.domain.models
+package com.example.myapplication.domain.models.domain.models
 
 /*
  * Ficha de dominó inmutable.
