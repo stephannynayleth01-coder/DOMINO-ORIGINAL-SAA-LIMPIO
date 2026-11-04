@@ -1,11 +1,11 @@
 package com.example.myapplication.viewmodels
 
 import androidx.lifecycle.ViewModel
-import com.example.myapplication.data.enums.PowerType
 import com.example.myapplication.domain.engine.DominoEngine
 import com.example.myapplication.domain.models.Board
 import com.example.myapplication.domain.models.GameState
 import com.example.myapplication.domain.models.Tile
+import com.example.myapplication.views.components.PowerType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
